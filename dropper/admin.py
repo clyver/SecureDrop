@@ -1,3 +1,11 @@
 from django.contrib import admin
 
-# Register your models here.
+from dropper.models import Drop
+
+
+class DropAdmin(admin.ModelAdmin):
+
+    list_display = ('id', 'text', 'last_retrieved_on', 'created_on', 'updated_on')
+
+
+admin.site.register(Drop, DropAdmin)

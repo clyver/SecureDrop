@@ -1,6 +1,5 @@
-from django import forms
+from django import forms, http
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.http import HttpResponse, Http404
 from django.shortcuts import render
 
 from dropper.models import Drop
@@ -20,17 +19,27 @@ def index(request):
 
         if form.is_valid():
             drop = Drop.objects.create(text=form.cleaned_data['message'])
-            return HttpResponse('Thanks, your link is: {}{}'.format(request.get_host(), drop.link))
+            return http.HttpResponse('Thanks, your link is: {}{}'.format(request.get_host(), drop.link), status=201)
+        else:
+            return http.HttpResponseBadRequest('Bad request: {}'.format(', '.join(form.errors)))
 
     return render(request, 'dropper/new-drop.html', {'form': form})
 
 
 def get_drop(request, drop_uuid):
+    """
+    Attempt to lookup a Drop with the provided uuid.
+    """
 
     try:
         drop = Drop.objects.get(uuid=drop_uuid)
     except (ObjectDoesNotExist, ValidationError):
-        return Http404('Sorry! Message not found.')
+        return http.HttpResponseNotFound('Sorry! Drop not found.')
     else:
         drop.mark_retrieved()
-        return HttpResponse(drop.text)
+
+        # TODO: A DRF Serializer would be appropriate here.
+        drop_fields = ['uuid', 'created_on', 'updated_on', 'text']
+        drop_data = {drop_field: getattr(drop, drop_field) for drop_field in drop_fields}
+
+        return http.JsonResponse(drop_data)
