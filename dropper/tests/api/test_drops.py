@@ -62,3 +62,16 @@ class TestDrop(TestCase):
 
         drop.refresh_from_db()
         self.assertIsNotNone(drop.last_retrieved_on)
+
+    def test_retrieve_forbidden(self):
+        """
+        Confirm we get a 403 when attempting to retrieve a Drop that is no longer retrievable.
+        """
+
+        drop = factories.Drop(retrieval_limit=1)
+
+        response = self.client.get(self.retrieve_url.format(drop.uuid))
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.get(self.retrieve_url.format(drop.uuid))
+        self.assertEqual(response.status_code, 403)

@@ -36,10 +36,12 @@ def get_drop(request, drop_uuid):
     except (ObjectDoesNotExist, ValidationError):
         return http.HttpResponseNotFound('Sorry! Drop not found.')
     else:
-        drop.mark_retrieved()
+        drop_retrieval = drop.attempt_retrieval()
 
-        # TODO: A DRF Serializer would be appropriate here.
-        drop_fields = ['uuid', 'created_on', 'updated_on', 'text']
-        drop_data = {drop_field: getattr(drop, drop_field) for drop_field in drop_fields}
-
-        return http.JsonResponse(drop_data)
+        if drop_retrieval.was_successful:
+            # TODO: A DRF Serializer might be appropriate here at some point.
+            drop_fields = ['uuid', 'created_on', 'updated_on', 'text']
+            drop_data = {drop_field: getattr(drop, drop_field) for drop_field in drop_fields}
+            return http.JsonResponse(drop_data)
+        else:
+            return http.HttpResponseForbidden("Not authorized to retrieve Drop.")
