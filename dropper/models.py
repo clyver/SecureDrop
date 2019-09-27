@@ -1,8 +1,28 @@
+from cryptography.fernet import Fernet
 import uuid
 
+from django.conf import settings
 from django.db import models
 from django.urls import reverse
 from django.utils.timezone import now
+
+
+default_cipher = Fernet(settings.FERNET_KEY)
+
+
+class DropQuerySet(models.QuerySet):
+
+    def create(self, text=None, password=None, **kwargs):
+
+        text = text or ''
+
+        cipher = Fernet(password) if password else default_cipher
+        kwargs['text'] = cipher.encrypt(text.encode())
+
+        if password:
+            kwargs['password'] = default_cipher.encrypt(password)
+
+        return super().create(**kwargs)
 
 
 class Drop(models.Model):
@@ -10,9 +30,12 @@ class Drop(models.Model):
     A piece of text with built-in safeguarding.
     """
 
-    uuid = models.UUIDField(default=uuid.uuid4)
-    text = models.TextField()
+    objects = DropQuerySet.as_manager()
 
+    uuid = models.UUIDField(default=uuid.uuid4)
+    text = models.BinaryField()
+
+    password = models.CharField(null=True, blank=True, max_length=256)
     retrieval_limit = models.PositiveIntegerField(default=1, null=True, blank=True)
     rejection_limit = models.PositiveIntegerField(null=True, blank=True)
     expires_on = models.DateTimeField(null=True, blank=True)

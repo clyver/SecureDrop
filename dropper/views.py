@@ -2,7 +2,7 @@ from django import forms, http
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.shortcuts import render
 
-from dropper.models import Drop
+from dropper.models import Drop, default_cipher
 
 
 class NewDropForm(forms.Form):
@@ -42,6 +42,7 @@ def get_drop(request, drop_uuid):
             # TODO: A DRF Serializer might be appropriate here at some point.
             drop_fields = ['uuid', 'created_on', 'updated_on', 'text']
             drop_data = {drop_field: getattr(drop, drop_field) for drop_field in drop_fields}
+            drop_data['text'] = default_cipher.decrypt(drop_data['text']).decode()
             return http.JsonResponse(drop_data)
         else:
             return http.HttpResponseForbidden("Not authorized to retrieve Drop.")

@@ -1,17 +1,21 @@
 from django.test import TestCase
 from django.utils import timezone
 
+from dropper.models import default_cipher
 from dropper.tests import factories
 
 
 class TestDrop(TestCase):
 
-    def test_crete_empty(self):
+    def test_crete(self):
         """
-        Confirm we can create a Drop without any supplementary data.
+        Confirm we can create a basic Drop.
         """
         drop = factories.Drop()
-        self.assertEqual(drop.text, '')
+        self.assertEqual(default_cipher.decrypt(drop.text).decode(), '')
+
+        drop = factories.Drop(text='foo')
+        self.assertEqual(default_cipher.decrypt(drop.text).decode(), 'foo')
 
     def test_attempt_retrieval(self):
         """

@@ -14,6 +14,8 @@ import os
 
 import pymysql
 
+# Change this key in production.
+FERNET_KEY = b'yIobWf63QEZV_mFmY66upRQzjNsWyzqsHtRevz2chUE='
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from dropper.models import Drop
+from dropper.models import Drop, default_cipher
 from dropper.tests import factories
 
 
@@ -34,7 +34,7 @@ class TestDrop(TestCase):
         self.assertEqual(Drop.objects.count(), existing_count + 1)
 
         drop = Drop.objects.last()
-        self.assertEqual(drop.text, message)
+        self.assertEqual(default_cipher.decrypt(drop.text).decode(), message)
 
     def test_retrieve_fails_on_invalid_uuid(self):
         """
@@ -58,7 +58,7 @@ class TestDrop(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Drop.objects.count(), existing_count)
-        self.assertIn(drop.text, response.json().get('text'))
+        self.assertIn(default_cipher.decrypt(drop.text).decode(), response.json().get('text'))
 
         drop.refresh_from_db()
         self.assertIsNotNone(drop.last_retrieved_on)
