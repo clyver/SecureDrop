@@ -1,21 +1,17 @@
 from django.test import TestCase
 from django.utils import timezone
 
-from dropper.models import default_cipher
 from dropper.tests import factories
 
 
 class TestDrop(TestCase):
 
-    def test_crete(self):
+    def test_create(self):
         """
         Confirm we can create a basic Drop.
         """
-        drop = factories.Drop()
-        self.assertEqual(default_cipher.decrypt(drop.text).decode(), '')
-
         drop = factories.Drop(text='foo')
-        self.assertEqual(default_cipher.decrypt(drop.text).decode(), 'foo')
+        self.assertEqual(drop.text, 'foo')
 
     def test_attempt_retrieval(self):
         """
@@ -66,4 +62,41 @@ class TestDrop(TestCase):
         drop = factories.Drop(expires_on=one_minute_ago)
 
         drop_retrieval = drop.attempt_retrieval()
+        self.assertFalse(drop_retrieval.was_successful)
+
+    def test_attempt_retrieval_with_password(self):
+        """
+        Confirm we can retrieve a Drop providing the proper password.
+        """
+
+        password = 'mySecretPassword'
+        drop = factories.Drop(password=password)
+
+        drop_retrieval = drop.attempt_retrieval(password='garbagePassword')
+        self.assertFalse(drop_retrieval.was_successful)
+
+        drop_retrieval = drop.attempt_retrieval(password=password)
+        self.assertTrue(drop_retrieval.was_successful)
+
+    def test_attempt_retrieval_rejection_limit_reached(self):
+        """
+        Confirm we can no longer retrieve a Drop once the rejection limit is reached.
+        """
+
+        password = 'anotherVerySecretPassword'
+        rejection_limit = 2
+        drop = factories.Drop(password=password, rejection_limit=rejection_limit, retrieval_limit=2)
+
+        drop_retrieval = drop.attempt_retrieval(password=password)
+        self.assertTrue(drop_retrieval.was_successful)
+
+        while rejection_limit:
+            drop_retrieval = drop.attempt_retrieval()
+            self.assertFalse(drop_retrieval.was_successful)
+
+            rejection_limit -= 1
+
+        # Show that the Drop became locked even though we have yet to reach the retrieval limit.
+        drop_retrieval = drop.attempt_retrieval(password=password)
+        self.assertLess(drop.times_retrieved, drop.retrieval_limit)
         self.assertFalse(drop_retrieval.was_successful)

@@ -1,26 +1,19 @@
-from cryptography.fernet import Fernet
 import uuid
 
-from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
 from django.utils.timezone import now
 
-
-default_cipher = Fernet(settings.FERNET_KEY)
+from fernet_fields import EncryptedTextField
 
 
 class DropQuerySet(models.QuerySet):
 
-    def create(self, text=None, password=None, **kwargs):
+    def create(self, **kwargs):
 
-        text = text or ''
-
-        cipher = Fernet(password) if password else default_cipher
-        kwargs['text'] = cipher.encrypt(text.encode())
-
-        if password:
-            kwargs['password'] = default_cipher.encrypt(password)
+        if not kwargs.get('text'):
+            raise ValidationError('Must provide text to create a Drop.')
 
         return super().create(**kwargs)
 
@@ -33,18 +26,17 @@ class Drop(models.Model):
     objects = DropQuerySet.as_manager()
 
     uuid = models.UUIDField(default=uuid.uuid4)
-    text = models.BinaryField()
+    text = EncryptedTextField()
 
-    password = models.CharField(null=True, blank=True, max_length=256)
+    password = EncryptedTextField(null=True, blank=True)
     retrieval_limit = models.PositiveIntegerField(default=1, null=True, blank=True)
     rejection_limit = models.PositiveIntegerField(null=True, blank=True)
-    expires_on = models.DateTimeField(null=True, blank=True)
+    expires_on = models.DateField(null=True, blank=True)
 
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
 
-    @property
-    def is_retrievable(self):
+    def is_retrievable(self, password=None):
         """
         Indicate if this Drop is eligible for retrieval.
         """
@@ -52,20 +44,23 @@ class Drop(models.Model):
         if self.retrieval_limit is not None and self.times_retrieved >= self.retrieval_limit:
             return False
 
-        if self.rejection_limit is not None and self.times_rejected < self.rejection_limit:
+        if self.rejection_limit is not None and self.times_rejected >= self.rejection_limit:
             return False
 
         if self.is_expired:
             return False
 
+        if self.password and self.password != password:
+            return False
+
         return True
 
-    def attempt_retrieval(self):
+    def attempt_retrieval(self, password=None):
         """
         Record the attempted retrieval of this Drop.
         """
 
-        return DropRetrieval.objects.create(drop=self, was_successful=self.is_retrievable)
+        return DropRetrieval.objects.create(drop=self, was_successful=self.is_retrievable(password=password))
 
     @property
     def times_retrieved(self):
@@ -106,7 +101,7 @@ class Drop(models.Model):
         The link that can be used to attempt retrieval of this Drop.
         """
 
-        return reverse('get_link', kwargs={'drop_uuid': self.uuid})
+        return reverse('get_drop', kwargs={'drop_uuid': self.uuid})
 
 
 class DropRetrievalManager(models.QuerySet):
