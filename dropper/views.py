@@ -6,6 +6,9 @@ from django.urls import reverse
 from dropper.models import Drop
 
 
+# TODO: The UI is very much proof-of-concept. Replace Forms with a "real" front-end and DRF Viewsets.
+
+
 class NewDropForm(forms.Form):
 
     text = forms.CharField(label='Your secret message', widget=forms.Textarea)

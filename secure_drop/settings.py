@@ -14,8 +14,11 @@ import os
 
 import pymysql
 
-# Change this key in production.
-FERNET_KEY = b'yIobWf63QEZV_mFmY66upRQzjNsWyzqsHtRevz2chUE='
+# Keys expected to be set as env-vars. Enforced in manage.py
+TESTING_FERNET_KEY = b'yIobWf63QEZV_mFmY66upRQzjNsWyzqsHtRevz2chUE='
+FERNET_KEY = os.environ.get('FERNET_KEY') or TESTING_FERNET_KEY
+TESTING_SECRET_KEY = 'l@0%my035ke_599$ww6%)kctym!yah-a8tqr%zg7%u@2^jy0(^'
+SECRET_KEY = os.environ.get('SECRET_KEY') or TESTING_SECRET_KEY
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -26,9 +29,6 @@ pymysql.install_as_MySQLdb()
 
 # Quick-start developmentrop/b784ee5d-209c-4bab-88se-a782c6af19cf settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'l@0%my035ke_599$ww6%)kctym!yah-a8tqr%zg7%u@2^jy0(^'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
